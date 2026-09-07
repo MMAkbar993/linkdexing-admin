@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 
 // Rows at or above this many submitted links are highlighted.
 const HEAVY_USER_LINKS = 10000;
+const PAGE_SIZE = 100;
 const num = (n) => (n ?? 0).toLocaleString('en-US');
 
 const Users = () => {
@@ -14,17 +15,21 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchUsers = useCallback(async (q) => {
+  const fetchUsers = useCallback(async (q, p) => {
     setLoading(true);
     try {
-      const { users } = (
+      const { users, total } = (
         await privateApi.get(`${userUrl}/search`, {
-          params: q ? { q } : undefined,
+          params: { ...(q ? { q } : {}), page: p, limit: PAGE_SIZE },
         })
       ).data;
       setUsers(users);
+      setTotal(total);
       setQuery(q || '');
+      setPage(p);
     } catch (err) {
       toast.error(
         err.response?.data?.message ||
@@ -36,14 +41,14 @@ const Users = () => {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(undefined, 1);
   }, [fetchUsers]);
 
-  const onSearch = ({ search }) => fetchUsers(search.trim());
+  const onSearch = ({ search }) => fetchUsers(search.trim(), 1);
 
   const handleViewAll = () => {
     reset({ search: '' });
-    fetchUsers();
+    fetchUsers(undefined, 1);
   };
 
   const handleRestrict = async (user) => {
@@ -51,7 +56,7 @@ const Users = () => {
     try {
       await privateApi.post(`${userUrl}/restrict/${user._id}`, { option });
       toast.success(option ? 'User restricted' : 'Restriction removed');
-      fetchUsers(query);
+      fetchUsers(query, page);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not update user');
     }
@@ -68,11 +73,15 @@ const Users = () => {
     try {
       await privateApi.delete(`${userUrl}/delete/${user.email}`);
       toast.success('User deleted');
-      fetchUsers(query);
+      fetchUsers(query, page);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not delete user');
     }
   };
+
+  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   return (
     <div className="wrap">
@@ -81,8 +90,8 @@ const Users = () => {
           <h1>Users</h1>
           <p>
             {query
-              ? `${num(users.length)} result(s) for “${query}”`
-              : `${num(users.length)} accounts`}
+              ? `${num(total)} result(s) for “${query}”`
+              : `${num(total)} accounts`}
           </p>
         </div>
       </div>
@@ -172,6 +181,35 @@ const Users = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="card-head" style={{ borderTop: '1px solid var(--line)', borderBottom: 0 }}>
+          <span className="muted fine">
+            {total === 0
+              ? 'No results'
+              : `Showing ${num(rangeStart)}–${num(rangeEnd)} of ${num(total)}`}
+          </span>
+          <div className="tools">
+            <button
+              type="button"
+              className="btn-x ghost sm"
+              onClick={() => fetchUsers(query, page - 1)}
+              disabled={loading || page <= 1}
+            >
+              Previous
+            </button>
+            <span className="muted fine">
+              Page {num(page)} of {num(lastPage)}
+            </span>
+            <button
+              type="button"
+              className="btn-x ghost sm"
+              onClick={() => fetchUsers(query, page + 1)}
+              disabled={loading || page >= lastPage}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
