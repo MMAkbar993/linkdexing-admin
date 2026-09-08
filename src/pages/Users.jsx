@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 
 // Rows at or above this many submitted links are highlighted.
 const HEAVY_USER_LINKS = 10000;
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 200;
 const num = (n) => (n ?? 0).toLocaleString('en-US');
 
 // "Add credits" modal — also handles deducting, via a negative amount, for
@@ -218,10 +218,13 @@ const Users = () => {
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
                 <th scope="col" className="num">
-                  Credits balance
+                  Links purchased
                 </th>
                 <th scope="col" className="num">
                   Links used
+                </th>
+                <th scope="col" className="num">
+                  Balance
                 </th>
                 <th scope="col">Status</th>
                 <th scope="col" />
@@ -230,7 +233,7 @@ const Users = () => {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="empty">
+                  <td colSpan={7} className="empty">
                     {loading ? 'Loading…' : 'No users found.'}
                   </td>
                 </tr>
@@ -244,8 +247,9 @@ const Users = () => {
                   >
                     <td>{user.name}</td>
                     <td className="muted">{user.email}</td>
-                    <td className="num">{num(user.creditBalance)}</td>
+                    <td className="num">{num(user.creditsPurchased)}</td>
                     <td className="num">{num(user.totalLinks)}</td>
+                    <td className="num">{num(user.creditBalance)}</td>
                     <td>
                       {user.isRestrict ? (
                         <span className="badge-x warn">Restricted</span>
