@@ -10,6 +10,96 @@ const HEAVY_USER_LINKS = 10000;
 const PAGE_SIZE = 100;
 const num = (n) => (n ?? 0).toLocaleString('en-US');
 
+// "Add credits" modal — also handles deducting, via a negative amount, for
+// correcting a mistaken add.
+function AddCreditsModal({ user, onClose, onDone }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ defaultValues: { amount: '', reason: '' } });
+  const [submitting, setSubmitting] = useState(false);
+
+  const onSubmit = async ({ amount, reason }) => {
+    setSubmitting(true);
+    try {
+      const res = await privateApi.post(`${userUrl}/credits/adjust/${user._id}`, {
+        amount: Number(amount),
+        reason: reason || undefined,
+      });
+      toast.success(
+        `${user.name}'s balance is now ${num(res.data.balance)} credits`
+      );
+      onDone();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not update credits');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-x" onClick={(e) => e.stopPropagation()}>
+        <h3>Add credits</h3>
+        <p className="modal-sub">
+          {user.name} — currently {num(user.creditBalance)} credits
+        </p>
+
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <div className="field">
+            <label htmlFor="amount">Amount</label>
+            <input
+              id="amount"
+              type="number"
+              className="form-control"
+              placeholder="e.g. 200"
+              autoFocus
+              disabled={submitting}
+              {...register('amount', {
+                required: true,
+                validate: (v) => Number.isInteger(Number(v)) && Number(v) !== 0,
+              })}
+            />
+            {errors?.amount && (
+              <span className="error">Enter a whole number, not zero.</span>
+            )}
+            <p className="hint">
+              Use a negative number (e.g. -50) to correct a mistaken add.
+            </p>
+          </div>
+
+          <div className="field">
+            <label htmlFor="reason">Reason (optional)</label>
+            <input
+              id="reason"
+              type="text"
+              className="form-control"
+              placeholder="e.g. PayPal payment received manually"
+              disabled={submitting}
+              {...register('reason')}
+            />
+          </div>
+
+          <div className="actions">
+            <button
+              type="button"
+              className="btn-x ghost"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-x solid" disabled={submitting}>
+              {submitting ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 const Users = () => {
   const { register, handleSubmit, reset } = useForm();
   const [users, setUsers] = useState([]);
@@ -17,6 +107,7 @@ const Users = () => {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [creditsTarget, setCreditsTarget] = useState(null);
 
   const fetchUsers = useCallback(async (q, p) => {
     setLoading(true);
@@ -127,7 +218,10 @@ const Users = () => {
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
                 <th scope="col" className="num">
-                  Links submitted
+                  Credits balance
+                </th>
+                <th scope="col" className="num">
+                  Links used
                 </th>
                 <th scope="col">Status</th>
                 <th scope="col" />
@@ -136,7 +230,7 @@ const Users = () => {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty">
+                  <td colSpan={6} className="empty">
                     {loading ? 'Loading…' : 'No users found.'}
                   </td>
                 </tr>
@@ -150,6 +244,7 @@ const Users = () => {
                   >
                     <td>{user.name}</td>
                     <td className="muted">{user.email}</td>
+                    <td className="num">{num(user.creditBalance)}</td>
                     <td className="num">{num(user.totalLinks)}</td>
                     <td>
                       {user.isRestrict ? (
@@ -160,6 +255,13 @@ const Users = () => {
                     </td>
                     <td>
                       <div className="actions">
+                        <button
+                          type="button"
+                          className="btn-x solid sm"
+                          onClick={() => setCreditsTarget(user)}
+                        >
+                          Add credits
+                        </button>
                         <button
                           type="button"
                           className="btn-x ghost sm"
@@ -216,6 +318,17 @@ const Users = () => {
       <p className="muted fine" style={{ marginTop: 12 }}>
         Highlighted rows have submitted {num(HEAVY_USER_LINKS)} or more links.
       </p>
+
+      {creditsTarget && (
+        <AddCreditsModal
+          user={creditsTarget}
+          onClose={() => setCreditsTarget(null)}
+          onDone={() => {
+            setCreditsTarget(null);
+            fetchUsers(query, page);
+          }}
+        />
+      )}
     </div>
   );
 };
