@@ -23,6 +23,9 @@ const Header = ({ loggedIn, setLoggedIn }) => {
               <NavLink to="/users" activeClassName="is-active">
                 Users
               </NavLink>
+              <NavLink to="/payments" activeClassName="is-active">
+                Payments
+              </NavLink>
             </nav>
             <div className="spacer" />
             <button type="button" className="btn-bar" onClick={handleLogout}>

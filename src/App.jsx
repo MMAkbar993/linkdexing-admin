@@ -7,6 +7,7 @@ import { authUrl } from './api/endpoints';
 import { toast } from 'react-toastify';
 import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom';
 import Users from './pages/Users';
+import Payments from './pages/Payments';
 
 const PublicRoute = ({
   loggedIn,
@@ -62,6 +63,11 @@ function App() {
         <main className="admin-main">
           <Switch>
             <PrivateRoute path="/users" component={Users} loggedIn={loggedIn} />
+            <PrivateRoute
+              path="/payments"
+              component={Payments}
+              loggedIn={loggedIn}
+            />
             <PrivateRoute
               path="/dashboard"
               component={Dashboard}
