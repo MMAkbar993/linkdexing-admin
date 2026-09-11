@@ -9,6 +9,7 @@ import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom';
 import Users from './pages/Users';
 import Payments from './pages/Payments';
 import Submissions from './pages/Submissions';
+import Settings from './pages/Settings';
 
 const PublicRoute = ({
   loggedIn,
@@ -72,6 +73,11 @@ function App() {
             <PrivateRoute
               path="/submissions"
               component={Submissions}
+              loggedIn={loggedIn}
+            />
+            <PrivateRoute
+              path="/settings"
+              component={Settings}
               loggedIn={loggedIn}
             />
             <PrivateRoute

@@ -29,6 +29,9 @@ const Header = ({ loggedIn, setLoggedIn }) => {
               <NavLink to="/submissions" activeClassName="is-active">
                 Submissions
               </NavLink>
+              <NavLink to="/settings" activeClassName="is-active">
+                Settings
+              </NavLink>
             </nav>
             <div className="spacer" />
             <button type="button" className="btn-bar" onClick={handleLogout}>
