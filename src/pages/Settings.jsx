@@ -5,20 +5,27 @@ import { authUrl } from '../api/endpoints';
 
 const Settings = () => {
   const [costPerIndexCheck, setCostPerIndexCheck] = useState('');
+  const [rateLimitPerMinute, setRateLimitPerMinute] = useState('');
+  const [rateLimitPerDay, setRateLimitPerDay] = useState('');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingIndex, setSavingIndex] = useState(false);
+  const [savingApi, setSavingApi] = useState(false);
 
   useEffect(() => {
     privateApi
       .get(`${authUrl}/settings`)
-      .then((res) => setCostPerIndexCheck(String(res.data.settings.costPerIndexCheck)))
+      .then((res) => {
+        setCostPerIndexCheck(String(res.data.settings.costPerIndexCheck));
+        setRateLimitPerMinute(String(res.data.settings.apiRateLimitPerMinute));
+        setRateLimitPerDay(String(res.data.settings.apiRateLimitPerDay));
+      })
       .catch((err) =>
         toast.error(err.response?.data?.message || 'Could not load settings')
       )
       .finally(() => setLoading(false));
   }, []);
 
-  const onSubmit = async (e) => {
+  const saveIndexCost = async (e) => {
     e.preventDefault();
     const value = Number(costPerIndexCheck);
 
@@ -27,7 +34,7 @@ const Settings = () => {
       return;
     }
 
-    setSaving(true);
+    setSavingIndex(true);
     try {
       const res = await privateApi.post(`${authUrl}/settings`, {
         costPerIndexCheck: value,
@@ -37,7 +44,37 @@ const Settings = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not save settings');
     } finally {
-      setSaving(false);
+      setSavingIndex(false);
+    }
+  };
+
+  const saveRateLimits = async (e) => {
+    e.preventDefault();
+    const perMinute = Number(rateLimitPerMinute);
+    const perDay = Number(rateLimitPerDay);
+
+    if (!Number.isInteger(perMinute) || perMinute < 1) {
+      toast.error('Per-minute limit must be a whole number, at least 1.');
+      return;
+    }
+    if (!Number.isInteger(perDay) || perDay < 1) {
+      toast.error('Per-day limit must be a whole number, at least 1.');
+      return;
+    }
+
+    setSavingApi(true);
+    try {
+      const res = await privateApi.post(`${authUrl}/settings`, {
+        apiRateLimitPerMinute: perMinute,
+        apiRateLimitPerDay: perDay,
+      });
+      setRateLimitPerMinute(String(res.data.settings.apiRateLimitPerMinute));
+      setRateLimitPerDay(String(res.data.settings.apiRateLimitPerDay));
+      toast.success('Settings saved');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save settings');
+    } finally {
+      setSavingApi(false);
     }
   };
 
@@ -63,7 +100,7 @@ const Settings = () => {
           {loading ? (
             <p className="muted">Loading…</p>
           ) : (
-            <form className="form-x" onSubmit={onSubmit}>
+            <form className="form-x" onSubmit={saveIndexCost}>
               <div className="field" style={{ maxWidth: 280 }}>
                 <label htmlFor="cost">Credits per URL checked</label>
                 <input
@@ -74,7 +111,7 @@ const Settings = () => {
                   className="form-control"
                   value={costPerIndexCheck}
                   onChange={(e) => setCostPerIndexCheck(e.target.value)}
-                  disabled={saving}
+                  disabled={savingIndex}
                 />
                 <p className="hint">
                   {perCredit
@@ -83,8 +120,57 @@ const Settings = () => {
                 </p>
               </div>
 
-              <button type="submit" className="btn-x solid" disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
+              <button type="submit" className="btn-x solid" disabled={savingIndex}>
+                {savingIndex ? 'Saving…' : 'Save'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      <div className="card-x">
+        <div className="card-head">
+          <h2>Developer API rate limits</h2>
+        </div>
+        <div className="card-body-x">
+          {loading ? (
+            <p className="muted">Loading…</p>
+          ) : (
+            <form className="form-x" onSubmit={saveRateLimits}>
+              <div className="field" style={{ maxWidth: 280 }}>
+                <label htmlFor="perMinute">Requests per minute, per key</label>
+                <input
+                  id="perMinute"
+                  type="number"
+                  step="1"
+                  min="1"
+                  className="form-control"
+                  value={rateLimitPerMinute}
+                  onChange={(e) => setRateLimitPerMinute(e.target.value)}
+                  disabled={savingApi}
+                />
+              </div>
+
+              <div className="field" style={{ maxWidth: 280 }}>
+                <label htmlFor="perDay">Requests per day, per key</label>
+                <input
+                  id="perDay"
+                  type="number"
+                  step="1"
+                  min="1"
+                  className="form-control"
+                  value={rateLimitPerDay}
+                  onChange={(e) => setRateLimitPerDay(e.target.value)}
+                  disabled={savingApi}
+                />
+                <p className="hint">
+                  Applies to every API key individually - one developer
+                  hitting their limit doesn't affect anyone else's.
+                </p>
+              </div>
+
+              <button type="submit" className="btn-x solid" disabled={savingApi}>
+                {savingApi ? 'Saving…' : 'Save'}
               </button>
             </form>
           )}
